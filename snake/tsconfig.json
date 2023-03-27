@@ -1,0 +1,13 @@
+{
+    // 编译器选项 重要
+    "compilerOptions": {
+        // 用来指定 ts 被编译 ES 版本
+        "target": "es2015",
+        // 指定使用的模块化规范 输入任意值 在 tsc 可以查看所有版本 上同↑
+        // import vue from 'vue'   or  require
+        "module": "es2015",
+        // 所有严格的总开关
+        "strict": true,
+        "noEmitOnError": true // 报错不编译
+    }
+}
