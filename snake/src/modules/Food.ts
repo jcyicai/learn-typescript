@@ -31,8 +31,3 @@ class Food {
 }
 
 export default Food
-
-/* const foo = new Food()
-console.log(foo.X, foo.Y)
-foo.change()
-console.log(foo.X, foo.Y) */

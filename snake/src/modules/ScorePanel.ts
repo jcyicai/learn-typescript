@@ -38,6 +38,3 @@ class ScorePanel {
 }
 
 export default ScorePanel
-
-/* const scorePanel = new ScorePanel()
-scorePanel.addScore() */

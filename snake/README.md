@@ -11,6 +11,7 @@ postcss postcss-loader postcss-preset-env  css版本兼容 自动带上前缀等
 ```
 
 #### tsconfig.json
+
 ```js
 {
 	// 指定哪些ts文件需要被编译
@@ -24,11 +25,11 @@ postcss postcss-loader postcss-preset-env  css版本兼容 自动带上前缀等
 		// import vue from 'vue'   or  require
 		"module": "es2015",
 		// 用来指定项中要使用的库 默认不修改，除非在node环境或其他
-		//"lib": []
+		"lib": []
 		// 指定编译后文件所在目录
 		"outDir": "./dist",
 		// 将全局作用于代码合并为一个文件  模块化 必须是amd  module需设置为 system
-		//"outFile": "./dist/app.js"
+		"outFile": "./dist/app.js"
 		// 是否对js文件进行编译，默认为false
 		"allowJs": false,
 		// 是否检查js代码是否符合语法规范
@@ -51,12 +52,12 @@ postcss postcss-loader postcss-preset-env  css版本兼容 自动带上前缀等
 		"strictNullChecks": false
 	}
 	// 排除不编译的文件
-	// "exclude": [
-	//     "./src/hello/**/*"
-	// ],
+	"exclude": [
+	    "./src/hello/**/*"
+	],
 	// 集成配置文件
-	// "extends":""
+	"extends": ""
 	// 被编译的文件列表 不重要
-	// "files": []
+	"files": []
 }
 ```
