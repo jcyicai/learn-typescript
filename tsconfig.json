@@ -1,0 +1,8 @@
+{
+    "compilerOptions": {
+        // let a = null / undefined  则会设置为 指定类型 ， 关闭该配置 默认为 any 类型  
+        // 另一种 let foo: object = undefined  foo.toString() 就会报错 因为undefined不是对象类型
+        // undefined和null只能赋值给自身，或者any类型和unknown类型的变量
+        "strictNullChecks": true, 
+    },
+}
