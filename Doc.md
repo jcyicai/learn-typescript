@@ -189,7 +189,7 @@ type MyAge = typeof Age; // 报错 不能为值类型
 #### 数组 类型
 - 只读模式 添加 readonly
 - 由于只读数组是数组的父类型，所以它不能代替数组
-- readonly关键字不能与数组的泛型写法一起使用（`ReadonlyArray<number>` `eadonly<number[]>`）
+- readonly关键字不能与数组的泛型写法一起使用（`ReadonlyArray<number>` `Readonly<number[]>`）
 ```javascript
 let arr:number[] = [1, 2, 3];
 let arr:Array<number> = [1, 2, 3]; // Array 接口写法
@@ -224,7 +224,392 @@ var multi:number[][] =
 #### 元组 类型
 - 成员类型写在方括号里面的就是元组，写在外面的就是数组
 - 成员类型可以自由设置的数组，即数组的各个成员的类型可以不同
+- 使用元组时，必须明确给出类型声明（上例的`[number]`），不能省略，否则 TypeScript 会把一个值自动推断为数组。
+- 元组成员的类型可以添加问号后缀（`?`），表示该成员是可选的
+- 问号只能用于元组的尾部成员，也就是说，所有可选成员必须在必选成员之后
+- 元素成员数量限制，`let x:[string, string] = ['a', 'b']; x[2] = 'c'; // 报错`
+- 使用扩展运算符（...），可以表示不限成员数量的元组
+- 如果不确定元组成员的类型和数量，可以使用 `any`，但这样也就失去了使用元组和 TypeScript 的意义
+- 只读元组 `readonly []` 和 `Readonly<[number, string]>`
+- 跟数组一样，只读元组是元组的父类型。所以，元组可以替代只读元组，而只读元组不能替代元组。
 
 ```javascript
 const s:[string, string, boolean] = ['a', 'b', true];
+
+// 添加 ? 成员可选
+let a:[number, number?] = [1];
+
+// ? 必须在必选成员之后
+type myTuple = [
+  number,  // 必选
+  number,  // 必选 
+  number?, // 可选
+  string?  // 可选
+];
+
+// 使用 ... 可以不限成员数量的元组
+type NamedNums = [
+  string,
+  ...number[]
+];
+
+const a:NamedNums = ['A', 1, 2];
+const b:NamedNums = ['B', 1, 2, 3];
+
+// 不确定成员类型和数量
+type Tuple = [...any[]];
+
+// 使用括号 读取成员
+type Tuple = [string, number];
+type Age = Tuple[1]; // number
+
+// 只读元组
+type t = readonly [number, string] // 写法一
+type t = Readonly<[number, string]> // 写法二
+
+// 成员类型推断
+function f(
+  point:[number, number?, number?]
+) {
+  if (point.length === 4) {} // 报错  可能是 1|2|3
+}
+
+// 扩展运算符与成员数量
+const arr = [1, 2];
+function add(x:number, y:number){}
+add(...arr) // 报错  因为 add 只接收两个参数
+
+// 方案一
+// 修改为 元组 即可
+const arr:[number, number] = [1, 2];
+
+// 方案二
+// 因为 TypeScript 会认为arr的类型是readonly [1, 2]，这是一个只读的值类型，可以当作数组，也可以当作元组。
+const arr = [1, 2] as const;
+```
+
+#### symbol 类型
+- TypeScript 设计了symbol的一个子类型unique symbol，它表示单个的、某个具体的 Symbol 值。
+- 因为unique symbol表示单个值，所以这个类型的变量是不能修改值的，只能用const命令声明，不能用let声明。
+- 每个声明为unique symbol类型的变量，它们的值都是不一样的，其实属于两个值类型。
+- `const` 命令声明的变量，如果赋值为另一个 `symbol` 类型的变量，则推断类型为 `symbol`。
+- `let` 命令声明的变量，如果赋值为另一个 `unique symbol` 类型的变量，则推断类型还是 `symbol`。
+
+```javascript
+const x:unique symbol = Symbol();
+// 等同于
+const x = Symbol();
+
+const a:unique symbol = Symbol();
+const b:unique symbol = Symbol();
+a === b // 报错
+
+// 类型推断
+let x = Symbol(); // 类型为 symbol
+const x = Symbol(); // 类型为 unique symbol
+
+let x = Symbol();
+const y = x; // 类型为 symbol
+
+const x = Symbol();
+let y = x; // 类型为 symbol
+```
+
+#### 函数
+- 函数类型里面的参数名与实际参数名，可以不一致。
+- 函数的实际参数个数，可以少于类型指定的参数个数，但是不能多于，即 TypeScript 允许省略参数。
+- 如果一个变量要套用另一个函数类型，有一个小技巧，就是使用typeof运算符。
+- 任何需要类型的地方，都可以使用typeof运算符从一个值获取类型。
+- 如果函数的某个参数可以省略，则在参数名后面加问号表示。实际为 `原始类型 | undefined`。但是显示的设置为 `undefined`，则不能省略。
+- 函数的可选参数只能在参数列表的尾部，跟在必选参数的后面。
+- `void` 类型允许返回 `undefined` 或 `null`。
+- 如果变量、对象方法、函数参数的类型是 void 类型的函数，那么并不代表不能赋值为有返回值的函数。恰恰相反，该变量、对象方法和函数参数可以接受返回任意值的函数，这时并不会报错。如果后面使用了这个函数的返回值，就违反了约定，则会报错。
+- `never` 类型表示肯定不会出现的值。它用在函数的返回值，就表示某个函数肯定不会返回值，即函数不会正常执行结束。
+- `never` 类型不同于 `void` 类型。前者表示函数没有执行结束，不可能有返回值；后者表示函数正常执行结束，但是不返回值，或者说返回 `undefined`。
+
+```javascript
+// void 没有返回值 不写 ts会自行推断
+function hello(txt:string):void {
+  console.log('hello ' + txt);
+}
+
+// 类型推断
+// 写法一
+const hello = function (txt:string) {
+  console.log('hello ' + txt);
+}
+
+// 写法二 括号参数txt 必须 且 必须放在括号中
+const hello: (txt:string) => void = function (txt) {
+  console.log('hello ' + txt);
+};
+
+// 如果不写类型 会推断为 any
+type MyFunc = (string, number) => number;
+// (string: any, number: any) => number
+
+// 参数名和实际参数名可以不一致
+let f:(x:number) => number;
+f = function (y:number) {
+  return y;
+};
+
+// 实际参数个数可少于类型指定参数个数，但不能多于
+let myFunc:
+  (a:number, b:number) => number;
+
+myFunc = (a:number) => a; // 正确
+myFunc = (
+  a:number, b:number, c:number
+) => a + b + c; // 报错
+
+// 套用另一个函数 使用 typeof
+function add(x:number, y:number) {
+  return x + y;
+}
+const myAdd:typeof add = function (x, y) {
+  return x + y;
+}
+
+// 函数对象写法
+let add:{
+  (x:number, y:number):number
+};
+ 
+add = function (x, y) {
+  return x + y;
+};
+
+{
+  (参数列表): 返回值
+}
+
+// 接口写法
+interface myfn {
+  (a:number, b:number): number;
+}
+
+var add:myfn = (a, b) => a + b;
+
+// 箭头函数
+// people 为 Person[]   
+// (name):Person  
+// name类型省略 ts自行推断 
+// ({name})返回一个对象
+// (name):Person => {name} 如果这么写 代表一个函数体 由于没有 return 这个函数体不会返回任何值  所以 必须 加上 括号
+type Person = { name: string };
+const people = ['alice', 'bob', 'jan'].map(
+  (name):Person => ({name})
+);
+
+// 正确
+(name):Person => ({name})
+// 错误
+(name:Person) => ({name})
+// 错误
+name:Person => ({name})
+
+// 可选参数 添加 ?  实际为 原始类型 | undefined
+function f(x?:number) {}
+f(); // OK
+f(10); // OK
+f(undefined) // 正确
+
+// 函数的可选参数只能在参数列表的尾部，跟在必选参数的后面。
+let myFunc: (a?:number, b:number) => number; // 报错
+
+// 如果前面参数可能为空 则需显示的设置为 undefined
+let myFunc: ( a:number|undefined, b:number ) => number;
+
+// 参数默认值  
+function createPoint(x:number = 0,y:number = 0):[number, number] {
+  return [x, y];
+}
+createPoint() // [0, 0]
+
+// 可选参数与默认值不能同时使用
+function f(x?: number = 0) {} // 报错
+
+// 参数解构
+type ABC = { a:number; b:number; c:number };
+function sum({ a, b, c }:ABC) {
+  console.log(a + b + c);
+}
+
+// rest 函数剩余参数
+// rest 参数为数组
+function joinNumbers(...nums:number[]) {}
+
+// rest 参数为元组
+function f(...args:[boolean, number]) {}
+
+// 类型为  void 类型的函数 可以接受返回任意值的函数
+type voidFunc = () => void;
+const f:voidFunc = () => {
+  return 123;
+};
+f() * 2 // 报错  因为 f 函数设定为没有返回值
+
+function f():void {
+  return true; // 报错
+}
+ 
+const f3 = function ():void {
+  return true; // 报错
+};
+
+// never 类型
+function fail(msg:string):never {
+  throw new Error(msg);
+}
+
+// void 和 never 区别  never表示函数没有执行结束，不可能有返回值；void表示函数正常执行结束，但是不返回值，或者说返回undefined。
+// 正确
+function sing():void {
+  console.log('sing');
+}
+
+// 报错
+function sing():never {
+  console.log('sing');
+  // 等同于 return undefined
+}
+
+// 高阶函数  一个函数的返回值还是一个函数，那么前一个函数就称为高阶函数
+(someValue: number) => (multiplier: number) => someValue * multiplier;
+
+// 由于重载是一种比较复杂的类型声明方法，为了降低复杂性，一般来说，如果可以的话，应该优先使用联合类型替代函数重载。
+// 写法一
+function len(s:string):number;
+function len(arr:any[]):number;
+function len(x:any):number {
+  return x.length;
+}
+
+// 写法二
+function len(x:any[]|string):number {
+  return x.length;
+}
+```
+
+#### 对象类型
+- 属性的类型可以用分号结尾，也可以用逗号结尾。最后一个属性后面，可以写分号或逗号，也可以不写。
+- 一旦声明了类型，对象赋值时，就不能缺少指定的属性，也不能有多余的属性。
+- 如果属性值是一个对象，readonly修饰符并不禁止修改该对象的属性，只是禁止完全替换掉该对象。
+
+```javascript
+// 属性类型以分号结尾
+type MyObj = {
+  x:number;
+  y:number;
+};
+
+// 属性类型以逗号结尾
+type MyObj = {
+  x:number,
+  y:number,
+};
+
+const o1:MyObj = { x: 1 }; // 报错 缺少 y
+const o2:MyObj = { x: 1, y: 1, z: 1 }; // 报错 多了 z
+
+// 不能删除 属性 但可以对属性值修改
+const myUser = {
+  name: "Sabrina",
+};
+delete myUser.name // 报错
+myUser.name = "Cynthia"; // 正确
+
+// 对象的方法使用函数类型描述。
+const obj:{
+  x: number;
+  y: number;
+  add(x:number, y:number): number;
+  // 或者写成
+  // add: (x:number, y:number) => number;
+} = {
+  x: 1,
+  y: 1,
+  add(x, y) {
+    return x + y;
+  }
+};
+
+// 除了type命令可以为对象类型声明一个别名，TypeScript 还提供了interface命令，可以把对象类型提炼为一个接口。
+// 写法一
+type MyObj = {
+  x:number;
+  y:number;
+};
+const obj:MyObj = { x: 1, y: 1 };
+
+// 写法二
+interface MyObj {
+  x: number;
+  y: number;
+}
+const obj:MyObj = { x: 1, y: 1 };
+
+// 可选属性 添加 ?  可选属性等同于允许赋值为undefined
+const obj: {
+  x: number;
+  y?: number;
+} = { x: 1 };
+
+type User = {
+  firstName: string;
+  lastName?: string;
+};
+
+// 等同于
+type User = {
+  firstName: string;
+  lastName?: string|undefined;
+};
+
+// 只读属性 不能修改值
+interface MyInterface {
+  readonly age: number;
+}
+const person:MyInterface = { age: 20 };
+person.age = 21; // 报错
+
+// 如果属性值是一个对象，readonly修饰符并不禁止修改该对象的属性，只是禁止完全替换掉该对象。
+interface Home {
+  readonly resident: {
+    name: string;
+    age: number
+  };
+}
+
+const h:Home = {
+  resident: {
+    name: 'Vicky',
+    age: 42
+  }
+};
+
+h.resident.age = 32; // 正确
+h.resident = {
+  name: 'Kate',
+  age: 23 
+} // 报错
+
+// 属性名的索引类型
+type MyObj = {
+  [property: string]: string
+};
+
+const obj:MyObj = {
+  foo: 'a',
+  bar: 'b',
+  baz: 'c',
+};
+
+// 解构
+const {id, name, price}:{
+  id: string;
+  name: string;
+  price: number
+} = product;
 ```

@@ -30,3 +30,17 @@
 
 // const arr: readonly number[] = [1,2]
 // arr[0] = 2
+
+// function add(x:number, y:number) {
+//     return x + y;
+//   }
+
+// console.log(typeof add)
+
+// type MyArr = {
+//   [n: number]: number
+// }
+
+// const arr: MyArr = {
+//   1: 1,
+// }
