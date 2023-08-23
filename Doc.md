@@ -613,3 +613,421 @@ const {id, name, price}:{
   price: number
 } = product;
 ```
+
+#### interface 接口
+- interface 是对象的模板，可以看作是一种类型约定。使用了某个模板的对象，就拥有了指定的类型结构。
+- 一个接口中，最多只能定义一个字符串索引。字符串索引会约束该类型中所有名字为字符串的属性。
+- 属性的数值索引，其实是指定数组的类型。
+- 一个接口中最多只能定义一个数值索引。
+- 如果一个 interface 同时定义了字符串索引和数值索引，那么数值索性必须服从于字符串索引。因为在 JavaScript 中，数值属性名最终是自动转换成字符串属性名。
+- 继承，如果子接口与父接口存在同名属性，那么子接口的属性会覆盖父接口的属性。注意，子接口与父接口的同名属性必须是类型兼容的，不能有冲突，否则会报错。
+- 多重继承时，如果多个父接口存在同名属性，那么这些同名属性不能有类型冲突，否则会报错。
+- 同名接口合并时，同一个属性如果有多个类型声明，彼此不能有类型冲突。
+- 同名接口合并时，如果同名方法有不同的类型声明，那么会发生函数重载。而且，后面的定义比前面的定义具有更高的优先级。
+- 同名方法之中，如果有一个参数是字面量类型，字面量类型有更高的优先级。
+- 如果两个 interface 组成的联合类型存在同名属性，那么该属性的类型也是联合类型。
+- `interface` 与 `type` 的区别
+  - `type` 能够表示非对象类型，而 `interface` 只能表示对象类型（包括数组、函数等）。
+  - `interface` 可以继承其他类型，`type` 不支持继承。（继承的主要作用是添加属性，type定义的对象类型如果想要添加属性，只能使用&运算符，重新定义一个类型。）
+  - 同名 `interface` 会自动合并，同名 `type` 则会报错。也就是说，TypeScript 不允许使用 `type` 多次定义同一个类型。
+  - `interface` 不能包含属性映射（mapping），`type` 可以
+  - `this` 关键字只能用于 `interface`
+  - `type` 可以扩展原始数据类型，`interface` 不行
+  - `interface` 无法表达某些复杂类型（比如交叉类型和联合类型），但是 `type` 可以
+
+```javascript
+interface Person {
+  firstName: string;
+  lastName: string;
+  age: number;
+}
+
+const p:Person = {
+  firstName: 'Jason',
+  lastName: 'Chen',
+  age: 18
+};
+
+// [] 取出接口某属性类型
+interface Foo {
+  a: string;
+}
+type A = Foo['a']; // string
+
+// 可选
+interface Foo {
+  x?: string;
+}
+// 只读
+interface A {
+  readonly a: string;
+}
+// 索引
+interface A {
+  [prop: string]: number;  // [prop: string]: any;
+}
+
+// 属性的数值索引 等同于指定数组类型
+interface A {
+  [prop: number]: string;
+}
+const obj:A = ['a', 'b', 'c'];
+
+// 同时定义字符串和数值索引，数值必须服从字符串
+interface A {
+  [prop: string]: number;
+  [prop: number]: string; // 报错
+}
+interface B {
+  [prop: string]: number;
+  [prop: number]: number; // 正确  服从了字符串索引 number类型
+}
+
+// 对象方法
+// 写法一
+interface A {
+  f(x: boolean): string;
+}
+// 写法二
+interface B {
+  f: (x: boolean) => string;
+}
+// 写法三
+interface C {
+  f: { (x: boolean): string };
+}
+
+// 属性的表达式写法
+const f = 'f';
+interface A {
+  [f](x: boolean): string;
+}
+
+// 类型方法重载
+interface A {
+  f(): number;
+  f(x: boolean): boolean;
+  f(x: string, y: string): string;
+}
+
+// 声明独立的函数
+interface Add {
+  (x:number, y:number): number;
+}
+const myAdd:Add = (x,y) => x + y;
+
+// 构造函数
+interface ErrorConstructor {
+  new (message?: string): Error;
+}
+
+// 继承
+interface Shape {
+  name: string;
+}
+interface Circle extends Shape {
+  radius: number;
+}
+
+// 多重继承
+interface Style {
+  color: string;
+}
+interface Shape {
+  name: string;
+}
+interface Circle extends Style, Shape {
+  radius: number;
+}
+
+// 子接口和父接口同名属性类型必须相同 否则报错
+interface Foo {
+  id: string;
+}
+interface Bar extends Foo {
+  id: number; // 报错
+}
+
+// 多重继承 同名属性类型不同则报错
+interface Foo {
+  id: string;
+}
+interface Bar {
+  id: number;
+}
+// 报错
+interface Baz extends Foo, Bar {
+  type: string;
+}
+
+// 继承 type
+type Country = {
+  name: string;
+  capital: string;
+}
+interface CountryWithPop extends Country {
+  population: number;
+}
+
+// 接口合并 最终返回三个属性
+interface Box {
+  height: number;
+  width: number;
+}
+interface Box {
+  length: number;
+}
+
+// 同名接口合并，相同属性类型必须相同
+interface A {
+  a: number;
+}
+interface A {
+  a: string; // 报错
+}
+
+// 同名接口合并时，如果同名方法有不同的类型声明，那么会发生函数重载。而且，后面的定义比前面的定义具有更高的优先级。
+interface Cloner {
+  clone(animal: Animal): Animal;
+}
+interface Cloner {
+  clone(animal: Sheep): Sheep;
+}
+interface Cloner {
+  clone(animal: Dog): Dog;
+  clone(animal: Cat): Cat;
+}
+// 等同于
+interface Cloner {
+  clone(animal: Dog): Dog;
+  clone(animal: Cat): Cat;
+  clone(animal: Sheep): Sheep;
+  clone(animal: Animal): Animal;
+}
+
+// 同名方法之中，如果有一个参数是字面量类型，字面量类型有更高的优先级。
+interface A {
+  f(x:'foo'): boolean;
+}
+interface A {
+  f(x:any): void;
+}
+// 等同于
+interface A {
+  f(x:'foo'): boolean;
+  f(x:any): void;
+}
+
+// 如果两个 interface 组成的联合类型存在同名属性，那么该属性的类型也是联合类型。
+interface Circle {
+  area: bigint;
+}
+interface Rectangle {
+  area: number;
+}
+declare const s: Circle | Rectangle;
+s.area;   // bigint | number
+
+// type 继承
+type Animal = {
+  name: string
+}
+type Bear = Animal & {
+  honey: boolean
+}
+
+// interface 和 type 互相继承
+interface Foo { x: number; }
+type Bar = Foo & { y: number; };
+
+type Foo = { x: number; };
+interface Bar extends Foo {
+  y: number;
+}
+
+// type 同名会报错  interface 则可以
+type A = { foo:number }; // 报错
+type A = { bar:number }; // 报错
+
+interface A { foo:number };
+interface A { bar:number };
+const obj:A = {
+  foo: 1,
+  bar: 1
+};
+
+// interface不能包含属性映射（mapping），type可以
+interface Point {
+  x: number;
+  y: number;
+}
+
+// 正确
+type PointCopy1 = {
+  [Key in keyof Point]: Point[Key];
+};
+
+// 报错
+interface PointCopy2 {
+  [Key in keyof Point]: Point[Key];
+};
+
+// this关键字只能用于interface
+// 正确
+interface Foo {
+  add(num:number): this;
+};
+
+// 报错
+type Foo = {
+  add(num:number): this;
+};
+
+// type 可以扩展原始数据类型，interface 不行
+// 正确
+type MyStr = string & {
+  type: 'new'
+};
+
+// 报错
+interface MyStr extends string {
+  type: 'new'
+}
+
+// interface无法表达某些复杂类型（比如交叉类型和联合类型），但是type可以
+type A = { /* ... */ };
+type B = { /* ... */ };
+
+type AorB = A | B;
+type AorBwithName = AorB & {
+  name: string
+};
+```
+
+#### class 类
+- 造方法修改只读属性的值也是可以的。或者说，如果两个地方都设置了只读属性的值，以构造方法为准。在其他方法修改只读属性都会报错。
+- 类可以实现多个接口（其实是接受多重限制），每个接口之间使用逗号分隔。
+- TypeScript 不允许两个同名的类，但是如果一个类和一个接口同名，那么接口会被合并进类。
+- TypeScript 的类本身就是一种类型，但是它代表该类的实例类型，而不是 `class` 的自身类型。
+- 类的内部成员的外部可访问性，由三个可访问性修饰符控制：`public`（公开） 、 `private` （私有） 和 `protected` （保护）。
+- 类的内部可以使用 `static` 关键字，定义静态成员。
+
+```javascript
+// strictPropertyInitialization 默认配置是打开的
+// 就会检查属性是否设置了初值，如果没有就报错
+class Point {
+  x: number; // 报错
+  y: number; // 报错
+}
+// 使用非空断言 可以不报错
+class Point {
+  x!: number;
+  y!: number;
+}
+
+// 只读属性
+class A {
+  readonly id = 'foo';
+}
+const a = new A();
+a.id = 'bar'; // 报错
+
+// 构造方法支持修改只读属性值，以构造方法为准
+class A {
+  readonly id:string = 'foo';
+
+  constructor() {
+    this.id = 'bar'; // 正确
+  }
+}
+
+// 参数默认值
+class Point {
+  x: number;
+  y: number;
+
+  constructor(x = 0, y = 0) {
+    this.x = x;
+    this.y = y;
+  }
+}
+
+// 存取器写法
+class C {
+  _name = '';
+  get name() {
+    return this._name;
+  }
+  set name(value) {
+    this._name = value;
+  }
+}
+
+// 类使用 implements 关键字，表示当前类满足这些外部类型条件的限制。
+interface Country {
+  name:string;
+  capital:string;
+}
+// 或者
+type Country = {
+  name:string;
+  capital:string;
+}
+
+class MyCountry implements Country {
+  name = '';
+  capital = '';
+}
+
+// interface 只是指定检查条件，如果不满足这些条件就会报错。它并不能代替 class 自身的类型声明。
+interface A {
+  get(name:string): boolean;
+}
+
+class B implements A {
+  get(s) { // s 的类型是 any  如需也是 string 类型 则要单独设置 s:string
+    return true;
+  }
+}
+
+// 实现多个接口
+class Car implements MotorVehicle, Flyable, Swimmable {}
+
+// 如果一个类和一个接口同名，那么接口会被合并进类。
+class A {
+  x:number = 1;
+}
+
+interface A {
+  y:number;
+}
+
+let a = new A();
+a.y = 10;
+
+a.x // 1
+a.y // 10
+
+// 结构类型原则：只要Person类具有name属性，就满足Customer类型的实例结构，所以可以代替它。反过来就不行，如果Customer类多出一个属性，就会报错。
+class Person {
+  name: string;
+}
+
+class Customer {
+  name: string;
+  age: number;
+}
+
+// 报错
+const cust:Customer = new Person();
+
+// 类 继承
+class A {
+  greet() {
+    console.log('Hello, world!');
+  }
+}
+class B extends A {}
+const b = new B();
+b.greet() // "Hello, world!"
+```

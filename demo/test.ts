@@ -44,3 +44,18 @@
 // const arr: MyArr = {
 //   1: 1,
 // }
+
+// interface MyObj {
+//     a: boolean;      // 编译错误
+//     [prop: string]: number;
+// }
+
+// interface Country {
+//   name: string
+//   capital: string
+// }
+
+// class MyCountry implements Country {
+//   name = ''
+//   capital = '' // number 类型则报错 需满足 Country
+// }
