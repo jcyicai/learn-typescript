@@ -1031,3 +1031,417 @@ class B extends A {}
 const b = new B();
 b.greet() // "Hello, world!"
 ```
+
+#### 泛型
+- 泛型的特点就是带有“类型参数”
+- 解决反映参数与返回值之间的类型关系
+- 类型参数的名字，可以随便取，但是必须为合法的标识符。习惯上，类型参数的第一个字符往往采用大写字母。一般会使用T（type 的第一个字母）作为类型参数的名字。如果有多个类型参数，则使用 T 后面的 U、V 等字母命名，各个参数之间使用逗号（“,”）分隔。
+- 泛型主要用在四个场合：函数、接口、类和别名。
+- 类型参数的约束条件 `<TypeParameter extends ConstraintType>` ， `TypeParameter` 表示类型参数，`extends` 是关键字，这是必须的，`ConstraintType` 表示类型参数要满足的条件，即类型参数应该是 `ConstraintType` 的子类型。
+- 注意点
+  - 尽量少用泛型。泛型虽然灵活，但是会加大代码的复杂性，使其变得难读难写。一般来说，只要使用了泛型，类型声明通常都不太易读，容易写得很复杂。因此，可以不用泛型就不要用。
+  - 类型参数越少越好。多一个类型参数，多一道替换步骤，加大复杂性。因此，类型参数越少越好。
+  - 类型参数需要出现两次。如果类型参数在定义后只出现一次，那么很可能是不必要的。
+  - 泛型可以嵌套。
+
+```javascript
+function getFirst<T>(arr:T[]):T {
+  return arr[0];
+}
+getFirst<number>([1,2,3])
+getFirst([1,2,3]) // 自行推断 可忽略
+
+// 此时必须显示设置 否则报错
+function comb<T>(arr1:T[], arr2:T[]):T[] {
+  return arr1.concat(arr2);
+}
+comb([1, 2], ['a', 'b']) // 报错
+comb<number|string>([1, 2], ['a', 'b']) // 正确
+
+// 多个参数
+function map<T, U>(arr:T[],f:(arg:T) => U):U[] {
+  return arr.map(f);
+}
+map<string, number>(['1', '2', '3'],(n) => parseInt(n)); // 返回 [1, 2, 3]
+
+// 函数泛型
+function id<T>(arg:T):T {
+  return arg;
+}
+// 写法一
+let myId:<T>(arg:T) => T = id;
+// 写法二
+let myId:{ <T>(arg:T): T } = id;
+
+// 接口泛型
+interface Box<Type> {
+  contents: Type;
+}
+let box:Box<string>;
+
+// 类的泛型
+class Pair<K, V> {
+  key: K;
+  value: V;
+}
+
+class A<T> {
+  value: T;
+}
+class B extends A<any> {}
+
+// 类型别名的泛型
+type Nullable<T> = T | undefined | null;
+
+type Container<T> = { value: T };
+const a: Container<number> = { value: 0 };
+
+type Tree<T> = {
+  value: T;
+  left: Tree<T> | null;
+  right: Tree<T> | null;
+};
+
+// 类型参数默认值
+function getFirst<T = string>(arr:T[]):T {
+  return arr[0];
+}
+// TypeScript 会从实际参数推断出T的值，从而覆盖掉默认值
+getFirst([1, 2, 3]) // 正确  覆盖了原有的 string 默认值
+
+// 类型参数的默认值，往往用在类中
+class Generic<T = string> {
+  list:T[] = []  // string[]
+  add(t:T) { // string参数
+    this.list.push(t)
+  }
+}
+const g = new Generic();
+g.add(1) // 报错
+g.add('hello') // 正确
+
+const g = new Generic<number>();
+g.add(4) // 正确
+g.add('hello') // 报错
+
+// 数组泛型
+let arr:Array<number> = [1, 2, 3];
+
+function doStuff(values:ReadonlyArray<string>) { // 只读数组 ReadonlyArray<T>
+  values.push('hello!');  // 报错
+}
+
+// 类型约束  <TypeParameter extends ConstraintType>
+function comp<T extends { length: number }>(a: T,b: T) { // 表示类型参数 T 必须满足{ length: number }，否则就会报错。
+  if (a.length >= b.length) {
+    return a;
+  }
+  return b;
+}
+comp([1, 2], [1, 2, 3]) // 正确
+comp('ab', 'abc') // 正确
+comp(1, 2) // 报错
+
+// 类型参数可以同时设置约束条件和默认值，前提是默认值必须满足约束条件。
+type Fn<A extends string, B extends string = 'world'> =  [A, B];
+type Result = Fn<'hello'> // ["hello", "world"]
+
+// 如果有多个类型参数，一个类型参数的约束条件，可以引用其他参数。
+<T, U extends T>
+// 或者
+<T extends U, U>
+
+// 但是，约束条件不能引用类型参数自身。
+<T extends T>               // 报错
+<T extends U, U extends T>  // 报错
+
+// 如果类型参数在定义后只出现一次，那么很可能是不必要的。
+function greet<Str extends string>(s:Str) {
+  console.log('Hello, ' + s);
+}
+function greet(s:string) {
+  console.log('Hello, ' + s);
+}
+
+// 泛型可以嵌套
+type OrNull<Type> = Type|null;
+type OneOrMany<Type> = Type|Type[];
+type OneOrManyOrNull<Type> = OrNull<OneOrMany<Type>>;
+```
+
+#### Enum 类型
+- Enum 结构本身也是一种类型。
+- 调用 Enum 的某个成员，与调用对象属性的写法一样，可以使用点运算符，也可以使用方括号运算符。
+- TypeScript 5.0 之前，Enum 有一个 Bug，就是 Enum 类型的变量可以赋值为任何数值。
+- 由于 Enum 结构编译后是一个对象，所以不能有与它同名的变量（包括对象、函数、类等）。
+- 成员的值可以是任意数值，但不能是大整数（Bigint）。
+- 如果希望加上 `const` 关键词后，运行时还能访问 `Enum` 结构（即编译后依然将 `Enum` 转成对象），需要在编译时打开 `preserveConstEnums` 编译选项。
+
+```javascript
+enum Color {
+  Red,     // 0
+  Green,   // 1
+  Blue     // 2
+}
+
+// Enum 结构本身也是一种类型。
+let c:Color = Color.Green; // 正确
+let c:number = Color.Green; // 正确
+
+// 显示赋值
+enum Color {
+  Red,
+  Green,
+  Blue
+}
+
+// 等同于
+enum Color {
+  Red = 0,
+  Green = 1,
+  Blue = 2
+}
+
+// 成员值不能为大整数
+enum Color {
+  Red = 90,
+  Green = 0.5,
+  Blue = 7n // 报错
+}
+
+// 成员的值甚至可以相同。
+enum Color {
+  Red = 0,
+  Green = 0,
+  Blue = 0
+}
+
+// 如果只设定第一个成员的值，后面成员的值就会从这个值开始递增
+enum Color {
+  Red = 7,
+  Green,  // 8
+  Blue   // 9
+}
+
+// 或者
+enum Color {
+  Red, // 0
+  Green = 7,
+  Blue // 8
+}
+
+// Enum 成员值都是只读的，不能重新赋值。
+enum Color {
+  Red,
+  Green,
+  Blue
+}
+Color.Red = 4; // 报错
+
+// 通常会在 enum 关键字前面加上const修饰，表示这是常量，不能再次赋值。
+const enum Color {
+  Red,
+  Green,
+  Blue
+}
+
+// 多个同名的 Enum 结构会自动合并
+enum Foo {
+  A,
+}
+
+enum Foo {
+  B = 1,
+}
+
+enum Foo {
+  C = 2,
+}
+
+// 等同于
+enum Foo {
+  A,
+  B = 1,
+  C = 2
+}
+
+// Enum 结构合并时，只允许其中一个的首成员省略初始值，否则报错。
+enum Foo {
+  A,
+}
+
+enum Foo {
+  B, // 报错
+}
+
+// 同名 Enum 合并时，不能有同名成员，否则报错。
+enum Foo {
+  A,
+  B
+}
+
+enum Foo {
+  B = 1, // 报错
+  C
+}
+
+// 同名 Enum 合并的另一个限制是，所有定义必须同为 const 枚举或者非 const 枚举，不允许混合使用。
+// 正确
+enum E {
+  A,
+}
+enum E {
+  B = 1,
+}
+
+// 正确
+const enum E {
+  A,
+}
+const enum E {
+  B = 1,
+}
+
+// 报错
+enum E {
+  A,
+}
+const enum E {
+  B = 1,
+}
+
+// 字符串 Enum
+enum Direction {
+  Up = 'UP',
+  Down = 'DOWN',
+  Left = 'LEFT',
+  Right = 'RIGHT',
+}
+
+// 字符串枚举的所有成员值，都必须显式设置。如果没有设置，成员值默认为数值，且位置必须在字符串成员之前。
+enum Foo {
+  A, // 0
+  B = 'hello',
+  C // 报错  前面是字符串成员，必须显示设置值
+}
+
+// 如果函数的参数类型是字符串 Enum，传参时就不能直接传入字符串，而要传入 Enum 成员。
+enum MyEnum {
+  One = 'One',
+  Two = 'Two',
+}
+
+function f(arg:MyEnum) {
+  return 'arg is ' + arg;
+}
+
+f('One') // 报错
+
+// keyof 运算符可以取出 Enum 结构的所有成员名，作为联合类型返回。
+enum MyEnum {
+  A = 'a',
+  B = 'b'
+}
+// 'A'|'B'
+type Foo = keyof typeof MyEnum; // 这里的typeof是必需的，否则keyof MyEnum相当于keyof number
+
+// 返回 Enum 所有的成员值，可以使用in运算符
+enum MyEnum {
+  A = 'a',
+  B = 'b'
+}
+
+// { a: any, b: any }
+type Foo = { [key in MyEnum]: any };
+```
+
+#### 类型断言
+- TypeScript 提供了“类型断言”这样一种手段，允许开发者在代码中“断言”某个值的类型，告诉编译器此处的值是什么类型。TypeScript 一旦发现存在类型断言，就不再对该值进行类型推断，而是直接采用断言给出的类型。
+- 作用：允许开发者在某个位置“绕过”编译器的类型推断，让本来通不过类型检查的代码能够通过，避免编译器报错。
+- 类型断言的使用前提是，值的实际类型与断言的类型必须满足一个条件。
+- `expr as T`，`expr` 是实际的值，`T` 是类型断言，它们必须满足下面的条件：`expr` 是 `T` 的子类型，或者 `T` 是 `expr` 的子类型。
+
+```javascript
+type T = 'a'|'b'|'c';
+let foo = 'a';
+
+let bar:T = foo; // 报错 推断为 string
+// 修改后
+let bar:T = foo as T;
+
+// 类型断言两种写法
+// 语法一：<类型>值
+//<Type>value
+
+// 语法二：值 as 类型 （推荐）
+//value as Type
+
+const p:{ x: number } = { x: 0, y: 0 }; // 报错
+const p0:{ x: number } = { x: 0, y: 0 } as { x: number }; // 正确
+const p1:{ x: number } = { x: 0, y: 0 } as { x: number; y: number }; // 正确
+
+const username = document.getElementById('username');
+if (username) {
+  (username as HTMLInputElement).value; // 正确
+}
+
+// 断言成一个完全无关的类型
+// 因为any类型和unknown类型是所有其他类型的父类型，所以可以作为两种完全无关的类型的中介
+expr as unknown as T
+
+const n = 1;
+const m:string = n as unknown as string; // 正确
+
+let s = 'JavaScript' as const; // 等同于 s 类型为 'JavaScript'  
+s = 'Python'; // 报错 使用了as const断言以后，let 变量就不能再改变值了。
+
+let s1 = 'JavaScript';
+let s2 = s1 as const; // 报错
+
+// as const也不能用于表达式。
+let s = ('Java' + 'Script') as const; // 报错
+
+// as const也可以写成前置的形式。
+// 后置形式
+expr as const
+
+// 前置形式
+//<const>expr
+
+// 非空断言 后缀添加 !   非空断言会造成安全隐患，只有在确定一个表达式的值不为空时才能使用
+// 非空断言只有在打开编译选项strictNullChecks时才有意义。如果不打开这个选项，编译器就不会检查某个变量是否可能为undefined或null。
+const root = document.getElementById('root')!;
+
+// 保守做法
+const root = document.getElementById('root');
+if (root === null) {
+  throw new Error('Unable to find DOM element #root');
+}
+```
+
+// 15 - 22
+
+
+#### 注释指令
+- `@ts-nocheck` 告诉编译器不对当前脚本进行类型检查，可以用于 `TypeScript` 脚本，也可以用于 `JavaScript` 脚本。
+- 如果一个 `JavaScript` 脚本顶部添加了 `// @ts-check`，那么编译器将对该脚本进行类型检查，不论是否启用了 `checkJs` 编译选项。
+- `// @ts-ignore` 告诉编译器不对下一行代码进行类型检查，可以用于 `TypeScript` 脚本，也可以用于 `JavaScript` 脚本。
+
+#### tsconfig
+```javascript
+tsc --init // 创建 tscongfig.json
+{
+  "compilerOptions": {
+    "outDir": "./built", // 指定编译产物存放的目录
+    "allowJs": true, // 指定源目录的 JavaScript 文件是否原样拷贝到编译后的目录
+    "target": "es5" // 指定编译产物的 JS 版本
+  },
+  "include": ["./src/**/*"], // 指定哪些文件需要编译
+  "exclude": ["**/*.spec.ts"], // 去除指定文件
+  "extends": "../tsconfig.base.json", // 继承配置
+  // 如果extends属性指定的路径不是以./或../开头，那么编译器将在node_modules目录下查找指定的配置文件。
+  "extends": "@tsconfig/node12/tsconfig.json",
+  // files属性指定编译的文件列表，如果其中有一个文件不存在，就会报错，它是一个数组，排在前面的文件先编译
+  "files": ["a.ts", "b.ts"]
+}
+```

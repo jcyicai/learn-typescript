@@ -59,3 +59,20 @@
 //   name = ''
 //   capital = '' // number 类型则报错 需满足 Country
 // }
+
+// enum MyEnum {
+//   One = 'One',
+//   Two = 'Two',
+// }
+
+// function f(arg: MyEnum) {
+//   return 'arg is ' + arg
+// }
+
+// f('One') // 报错
+// f(MyEnum.One) // 正确
+
+// type T = 'a'|'b'|'c';
+// let fo = 'a';
+
+// let bar:T = fo as T; // 类型断言
