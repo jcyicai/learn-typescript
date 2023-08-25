@@ -1419,8 +1419,407 @@ if (root === null) {
 }
 ```
 
-// 15 - 22
+#### 模块
+- 任何包含 import 或 export 语句的文件，就是一个模块（module）。相应地，如果文件不包含 export 语句，就是一个全局的脚本文件。
+- 模块本身就是一个作用域，不属于全局作用域。模块内部的变量、函数、类只在内部可见，对于模块外部是不可见的。暴露给外部的接口，必须用 export 命令声明；如果其他文件要使用模块的接口，必须用 import 命令来输入。
 
+```javascript
+// 直出输出类型
+export type Bool = true | false;
+
+type Bool = true | false;
+export { Bool };
+
+// 导入
+import { Bool } from './a';
+let foo:Bool = true;
+
+// import 在一条语句中，可以同时输入类型和正常接口
+// 不利于区分类型和正常接口，容易造成混淆
+// a.ts
+export interface A {
+  foo: string;
+}
+export let a = 123;
+// b.ts
+import { A, a } from './a';
+
+// 方案一
+import { type A, a } from './a';
+
+// 方案二
+import type { A } from './a'; // 正确
+import type { a } from './a'; // 报错
+
+import type DefaultType from 'moduleA'; // 输入默认类型
+import type * as TypeNS from 'moduleA'; // 在一个名称空间下，输入所有类型的写法
+
+// export 输出 类型
+type A = 'a';
+type B = 'b';
+// 方法一
+export {type A, type B};
+// 方法二
+export type {A, B};
+
+// CommonJS 写法
+import * as fs from 'fs';
+// 等同于
+import fs = require('fs');
+
+let obj = { foo: 123 };
+export = obj; // 等同于 CommonJS 的module.exports对象
+
+// 路径映射
+{
+  "compilerOptions": {
+    "baseUrl": ".", // 表示基准目录就是tsconfig.json所在的目录
+    "paths": {
+      // jquery属性的值是一个数组，可以指定多个路径。如果第一个脚本路径不存在，那么就加载第二个路径，以此类推
+      "jquery": ["node_modules/jquery/dist/jquery"] 
+    },
+    // rootDirs字段指定模块定位时必须查找的其他目录。
+    "rootDirs": ["src/zh", "src/de", "src/#{locale}"]
+  }
+}
+```
+
+#### namespace 命名空间
+- namespace 用来建立一个容器，内部的所有变量和函数，都必须在这个容器里面使用。
+- 如果要在命名空间以外使用内部成员，就必须为该成员加上export前缀，表示对外输出该成员。
+- namespace 内部还可以使用import命令输入外部成员，相当于为外部成员起别名。
+- namespace 可以嵌套。
+- namespace 本身也可以使用export命令输出，供其他文件使用。
+- 多个同名的 namespace 会自动合并，这一点跟 interface 一样。
+
+```javascript
+namespace Utils {
+  function isString(value:any) {
+    return typeof value === 'string';
+  }
+  // 正确
+  isString('yes');
+}
+Utils.isString('no'); // 报错
+
+// 添加 export 供外部使用
+namespace Utility {
+  export function log(msg:string) {
+    console.log(msg);
+  }
+  export function error(msg:string) {
+    console.error(msg);
+  }
+}
+Utility.log('Call me');
+Utility.error('maybe!');
+
+namespace Utils {
+  export function isString(value:any) {
+    return typeof value === 'string';
+  }
+}
+namespace App {
+  import isString = Utils.isString;
+  isString('yes');
+  // 等同于
+  Utils.isString('yes');
+}
+```
+
+#### 装饰器
+- 装饰器（Decorator）是一种语法结构，用来在定义时修改类（class）的行为。
+  - 第一个字符（或者说前缀）是@，后面是一个表达式。
+  - @后面的表达式，必须是一个函数（或者执行后可以得到一个函数）。
+  - 这个函数接受所修饰对象的一些相关值作为参数。
+  - 这个函数要么不返回值，要么返回一个新对象取代所修饰的目标对象。
+
+```javascript
+function simpleDecorator() {
+  console.log('hi');
+}
+
+@simpleDecorator
+class A {} // "hi"  类A在执行前会先执行装饰器simpleDecorator()，并且会向装饰器自动传入参数
+```
+
+#### declare 关键字
+- `declare` 关键字用来告诉编译器，某个类型是存在的，可以在当前文件中使用。
+- 它的主要作用，就是让当前文件可以使用其他文件声明的类型。
+- 如果要为 `JavaScript` 引擎的原生对象添加属性和方法，可以使用 `declare global {}` 语法。
+
+```javascript
+declare let x:number;
+x = 1;
+
+// 变量document的类型是外部定义的（具体定义在 TypeScript 内置文件lib.d.ts）。
+declare var document;
+document.title = 'Hello';
+
+// declare 关键字只用来给出类型描述，是纯的类型代码，不允许设置变量的初始值，即不能涉及值。
+declare let x:number = 1;
+
+// declare 关键字可以给出外部函数的类型描述。
+declare function sayHello(
+  name:string
+):void;
+sayHello('张三');
+
+// 给 js 原生对象添加属性和方法
+export {};
+declare global {
+  interface String {
+    toSmallString(): string;
+  }
+}
+String.prototype.toSmallString = ():string => {
+  // 具体实现
+  return '';
+};
+
+// declare module 用于类型声明文件
+declare module "url" {
+  export interface Url {
+    protocol?: string;
+    hostname?: string;
+    pathname?: string;
+  }
+
+  export function parse(
+    urlStr: string,
+    parseQueryString?,
+    slashesDenoteHost?
+  ): Url;
+}
+
+declare module "path" {
+  export function normalize(p: string): string;
+  export function join(...paths: any[]): string;
+  export var sep: string;
+}
+
+// 使用时，自己的脚本使用三斜杠命令，加载这个类型声明文件。
+/// <reference path="node.d.ts"/>
+```
+
+#### d.ts 文件
+- 类型声明文件里面只有类型代码，没有具体的代码实现。它的文件名一般为 `[模块名].d.ts` 的形式，其中的 `d` 表示 `declaration`（声明）。
+- 类型声明文件的来源
+  - TypeScript 编译器自动生成。
+  - TypeScript 内置类型文件。
+  - 外部模块的类型声明文件，需要自己安装。
+- 类型声明文件里面，变量的类型描述必须使用declare命令，否则会报错，因为变量声明语句是值相关代码。interface 类型有没有declare都可以，因为 interface 是完全的类型代码。
+- 如果类型声明文件的内容非常多，可以拆分成多个文件，然后入口文件使用三斜杠命令，加载其他拆分后的文件。
+- 三斜杠命令（`///`）是一个 `TypeScript` 编译器命令，用来指定编译器行为。
+- `/// <reference path="" />` 是最常见的三斜杠命令，告诉编译器在编译时需要包括的文件，常用来声明当前脚本依赖的类型文件。
+
+```javascript
+// types.d.ts
+export interface Character {
+  catchphrase?: string;
+  name: string;
+}
+// index.ts
+import { Character } from "./types";
+export const character:Character = {
+  catchphrase: "Yee-haw!",
+  name: "Sandy Cheeks",
+};
+
+// .d.ts 文件 必须使用declare命令，否则会报错，因为变量声明语句是值相关代码
+declare let foo:string;
+// 可有可无 declare。interface 是完全的类型代码。
+interface Foo {} // 正确
+declare interface Foo {} // 正确
+
+// 如果类型声明文件的内容非常多，可以拆分成多个文件，然后入口文件使用三斜杠命令，加载其他拆分后的文件。
+/// <reference path="./interfaces.d.ts" />
+/// <reference path="./functions.d.ts" />
+
+// types 参数用来告诉编译器当前脚本依赖某个 DefinitelyTyped 类型库，通常安装在node_modules/@types目录。
+/// <reference types="node" />
+
+// /// <reference lib="..." />命令允许脚本文件显式包含内置 lib 库，等同于在tsconfig.json文件里面使用lib属性指定 lib 库。
+/// <reference lib="es2017.string" />
+```
+
+#### 运算符
+- keyof 是一个单目运算符，接受一个对象类型作为参数，返回该对象的所有键名组成的联合类型。
+- keyof 运算符往往用于精确表达对象的属性类型。
+
+```javascript
+type MyObj = {
+  foo: number,
+  bar: string,
+};
+type Keys = keyof MyObj; // 'foo'|'bar'
+
+interface T {
+  0: boolean;
+  a: string;
+  b(): void;
+}
+type KeyT = keyof T; // 0 | 'a' | 'b'
+
+// 如果对象属性名采用索引形式，keyof 会返回属性名的索引类型。
+// 示例一
+interface T {
+  [prop: number]: number;
+}
+// number
+type KeyT = keyof T;
+
+// 示例二
+interface T {
+  [prop: string]: number;
+}
+// string|number
+type KeyT = keyof T;
+
+// 对于联合类型，keyof 返回成员共有的键名。
+type A = { a: string; z: boolean };
+type B = { b: string; z: boolean };
+// 返回 'z'
+type KeyT = keyof (A | B);
+
+// 对于交叉类型，keyof 返回所有键名。
+type A = { a: string; x: boolean };
+type B = { b: string; y: number };
+
+// 返回 'a' | 'x' | 'b' | 'y'
+type KeyT = keyof (A & B);
+
+// 相当于
+keyof (A & B) ≡ keyof A | keyof B
+
+type MyObj = {
+  foo: number,
+  bar: string,
+};
+type Keys = keyof MyObj;
+type Values = MyObj[Keys]; // number|string
+
+function prop<Obj, K extends keyof Obj>(
+  obj:Obj, key:K
+):Obj[K] {
+  return obj[key];
+}
+
+// keyof 的另一个用途是用于属性映射，即将一个类型的所有属性逐一映射成其他值
+type NewProps<Obj> = {
+  [Prop in keyof Obj]: boolean;
+};
+// 用法
+type MyObj = { foo: number; };
+// 等于 { foo: boolean; }
+type NewObj = NewProps<MyObj>;
+
+// in 运算符
+type U = 'a'|'b'|'c';
+
+type Foo = {
+  [Prop in U]: number;
+};
+// 等同于
+type Foo = {
+  a: number,
+  b: number,
+  c: number
+};
+
+// 方括号运算符（[]）用于取出对象的键值类型
+type Person = {
+  age: number;
+  name: string;
+  alive: boolean;
+};
+
+// Age 的类型是 number
+type Age = Person['age'];
+```
+
+#### 类型映射
+- 映射（mapping）指的是，将一种类型按照映射规则，转换成另一种类型，通常用于对象类型。
+
+```javascript
+// [prop in keyof A]是一个属性名表达式，表示这里的属性名需要计算得到。
+// 类型B采用了属性名索引的写法，[prop in keyof A]表示依次得到类型A的所有属性名，然后将每个属性的类型改成string。
+type A = {
+  foo: number;
+  bar: number;
+};
+
+type B = {
+  [prop in keyof A]: string;
+};
+
+// 复制原始类型
+type A = {
+  foo: number;
+  bar: string;
+};
+
+type B = {
+  [prop in keyof A]: A[prop];
+};
+
+// 增加复用性 改成泛型
+type ToBoolean<Type> = {
+  [Property in keyof Type]: boolean;
+};
+
+type MyObj = {
+  [p in string]: boolean;
+};
+// 等同于
+type MyObj = {
+  [p: string]: boolean;
+};
+
+// 映射会原样复制原始对象的可选属性和只读属性。
+type A = {
+  a?: string;
+  readonly b: number;
+};
+
+type B = {
+  [Prop in keyof A]: A[Prop];
+};
+
+// 等同于
+type B = {
+  a?: string;
+  readonly b: number;
+};
+
+// +修饰符：写成+?或+readonly，为映射属性添加?修饰符或readonly修饰符。
+// –修饰符：写成-?或-readonly，为映射属性移除?修饰符或readonly修饰符。
+// 添加可选属性
+type Optional<Type> = {
+  [Prop in keyof Type]+?: Type[Prop];
+};
+
+// 移除可选属性
+type Concrete<Type> = {
+  [Prop in keyof Type]-?: Type[Prop];
+};
+
+// 键名重映射
+type A = {
+  foo: number;
+  bar: number;
+};
+
+type B = {
+  [p in keyof A as `${p}ID`]: number;
+};
+
+// 等同于
+type B = {
+  fooID: number;
+  barID: number;
+};
+```
 
 #### 注释指令
 - `@ts-nocheck` 告诉编译器不对当前脚本进行类型检查，可以用于 `TypeScript` 脚本，也可以用于 `JavaScript` 脚本。
